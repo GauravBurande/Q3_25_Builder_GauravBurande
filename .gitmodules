@@ -1,6 +1,6 @@
 [submodule "Q3-Prereq-TS"]
-	path = Q3-Prereq-TS
+	path = prereqs/Q3-Prereq-TS
 	url = git@github.com:GauravBurande/Q3-Prereq-TS.git
 [submodule "q3_prereq-rust"]
-	path = q3_prereq-rust
+	path = prereqs/q3_prereq-rust
 	url = git@github.com:GauravBurande/Q3-Prereq-Rust.git
