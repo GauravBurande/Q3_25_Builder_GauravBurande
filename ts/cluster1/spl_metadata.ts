@@ -15,23 +15,26 @@ import {
 import * as bs58 from "bs58";
 
 // Define our Mint address
-const mint = publicKey("<mint address>");
+const mint = publicKey("A1CsSRYowwfRayeaPa9DeHUmVNorboxnpP2s1NajVBos");
 
 // Create a UMI connection
 const umi = createUmi("https://api.devnet.solana.com");
 const keypair = umi.eddsa.createKeypairFromSecretKey(new Uint8Array(wallet));
 const signer = createSignerFromKeypair(umi, keypair);
-umi.use(signerIdentity(createSignerFromKeypair(umi, keypair)));
+umi.use(signerIdentity(signer));
 
 (async () => {
   try {
     // Start here
-    // let accounts: CreateMetadataAccountV3InstructionAccounts = {
-    //     ???
-    // }
-    // let data: DataV2Args = {
-    //     ???
-    // }
+    let accounts: CreateMetadataAccountV3InstructionAccounts = {
+      mint,
+      mintAuthority: signer,
+    };
+    let data: DataV2Args = {
+      name: "Stewie",
+      symbol: "STW",
+      uri: "",
+    };
     // let args: CreateMetadataAccountV3InstructionArgs = {
     //     ???
     // }

@@ -16,7 +16,7 @@ const commitment: Commitment = "confirmed";
 const connection = new Connection("https://api.devnet.solana.com", commitment);
 
 // Mint address
-const mint = new PublicKey("<mint address>");
+const mint = new PublicKey("A1CsSRYowwfRayeaPa9DeHUmVNorboxnpP2s1NajVBos");
 
 // Recipient address
 const to = new PublicKey("<receiver address>");

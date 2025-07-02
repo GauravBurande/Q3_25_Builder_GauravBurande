@@ -12,12 +12,17 @@ const connection = new Connection("https://api.devnet.solana.com", commitment);
 const token_decimals = 1_000_000n;
 
 // Mint address
-const mint = new PublicKey("<mint address>");
+const mint = new PublicKey("A1CsSRYowwfRayeaPa9DeHUmVNorboxnpP2s1NajVBos");
 
 (async () => {
   try {
     // Create an ATA
-    // const ata = ???
+    const ata = getOrCreateAssociatedTokenAccount(
+      connection,
+      keypair,
+      mint,
+      keypair.publicKey
+    );
     // console.log(`Your ata is: ${ata.address.toBase58()}`);
     // Mint to ATA
     // const mintTx = ???
