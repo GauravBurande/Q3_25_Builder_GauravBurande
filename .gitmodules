@@ -4,3 +4,6 @@
 [submodule "q3_prereq-rust"]
 	path = prereqs/q3_prereq-rust
 	url = git@github.com:GauravBurande/Q3-Prereq-Rust.git
+[submodule "Q3_25-anchor-vault"]
+	path = Q3_25-anchor-vault
+	url = https://github.com/GauravBurande/Q3_25-anchor-vault.git
