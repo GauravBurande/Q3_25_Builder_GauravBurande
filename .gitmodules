@@ -7,3 +7,6 @@
 [submodule "Q3_25-anchor-vault"]
 	path = Q3_25-anchor-vault
 	url = https://github.com/GauravBurande/Q3_25-anchor-vault.git
+[submodule "q3-25-escrow"]
+	path = q3-25-escrow
+	url = https://github.com/GauravBurande/q3-25-escrow.git
