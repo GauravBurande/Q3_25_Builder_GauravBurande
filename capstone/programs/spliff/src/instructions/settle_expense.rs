@@ -18,7 +18,7 @@ pub struct SettleExpense<'info> {
     pub group: Account<'info, Group>,
     
     #[account(address = mint::USDC)]
-    pub mint: Account<'info, Mint>,
+    pub mint: InterfaceAccount<'info, Mint>,
 
     #[account(
         mut,
@@ -26,7 +26,7 @@ pub struct SettleExpense<'info> {
         associated_token::authority = user,
         associated_token::token_program = token_program
     )]
-    pub debtor_usdc_ata: Account<'info, TokenAccount>,
+    pub debtor_usdc_ata: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,
@@ -34,7 +34,7 @@ pub struct SettleExpense<'info> {
         associated_token::authority = group.admin,
         associated_token::token_program = token_program
     )]
-    pub admin_usdc_ata: Account<'info, TokenAccount>,
+    pub admin_usdc_ata: InterfaceAccount<'info, TokenAccount>,
 
     #[account(
         mut,

@@ -8,6 +8,7 @@ pub struct AddExpense<'info> {
     #[account(mut)]
     pub admin: Signer<'info>,
 
+    /// CHECK: just a simple pubkey of a user
     pub user: UncheckedAccount<'info>,
 
     #[account(
