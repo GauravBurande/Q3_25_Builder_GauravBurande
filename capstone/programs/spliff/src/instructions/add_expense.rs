@@ -1,6 +1,6 @@
 use anchor_lang::prelude::*;
 
-use crate::{error::SpliffError, Expense, Group};
+use crate::{ Expense, Group};
 
 #[derive(Accounts)]
 #[instruction(amount: i64)]
