@@ -1,7 +1,12 @@
 import * as anchor from "@coral-xyz/anchor";
 import { Program, BN } from "@coral-xyz/anchor";
 import { Spliff } from "../target/types/spliff";
-import { Keypair, PublicKey } from "@solana/web3.js";
+import {
+  Keypair,
+  LAMPORTS_PER_SOL,
+  PublicKey,
+  Secp256k1Program,
+} from "@solana/web3.js";
 import { getAccount, getAssociatedTokenAddress } from "@solana/spl-token";
 
 describe("spliff", async () => {
@@ -34,6 +39,45 @@ describe("spliff", async () => {
   );
 
   const surfnetRPC = "http://127.0.0.1:8899";
+  const airdropUSDC = async (ownerAddress: PublicKey): Promise<void> => {
+    try {
+      let result = await fetch(surfnetRPC, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "surfnet_setTokenAccount",
+          params: [
+            ownerAddress.toBase58(),
+            USDC_MINT,
+            {
+              amount: 1000,
+            },
+          ],
+        }),
+      });
+
+      if (!result.ok) {
+        throw new Error(`HTTP error! status: ${result.status}`);
+      }
+
+      let response: any = await result.json();
+      if (response.error) {
+        console.error(
+          "USDC airdrop failed: ",
+          response.message,
+          ", data: ",
+          response.data
+        );
+      }
+    } catch (error) {
+      console.error("Error airdropping USDC:", error);
+      throw new Error(`Failed to airdrop USDC to ${ownerAddress}: ${error}`);
+    }
+  };
 
   const findUSDCAta = async (ownerAddress: PublicKey): Promise<PublicKey> => {
     try {
@@ -51,42 +95,12 @@ describe("spliff", async () => {
     }
   };
 
-  const airdropUSDC = async (ownerAddress: PublicKey): Promise<void> => {
-    try {
-      let result = await fetch(surfnetRPC, {
-        method: "POST",
-        body: JSON.stringify({
-          jsonrpc: "2.0",
-          id: 1,
-          method: "surfnet_setTokenAccount",
-          params: [
-            ownerAddress.toBase58(),
-            USDC_MINT,
-            {
-              amount: 100,
-            },
-          ],
-        }),
-      });
-
-      if (!result.ok) {
-        throw new Error(`HTTP error! status: ${result.status}`);
-      }
-
-      let response = await result.json();
-      console.log("airdropped usdc, response: ", JSON.stringify(response));
-    } catch (error) {
-      console.error("Error airdropping USDC:", error);
-      throw new Error(`Failed to airdrop USDC to ${ownerAddress}: ${error}`);
-    }
-  };
-
   const checkUSDCBalance = async (ownerAddress: PublicKey): Promise<number> => {
     const ata = await findUSDCAta(ownerAddress);
     const account = await getAccount(connection, ata);
     const balance = account.amount;
 
-    console.log(`usdc amount of ${ownerAddress.toBase58}: `, balance);
+    console.log(`usdc amount of ${ownerAddress.toBase58()}: `, balance);
     return Number(balance);
   };
 
@@ -100,16 +114,21 @@ describe("spliff", async () => {
       await airdropUSDC(user2.publicKey);
       await airdropUSDC(user3.publicKey);
 
-      // todo: Airdrop 0.1 sol to every user account
+      await Promise.all(
+        [user1, user2, user3].map((u) =>
+          connection.requestAirdrop(u.publicKey, 0.1 * LAMPORTS_PER_SOL)
+        )
+      );
 
-      console.log("USDC Airdrop to group peeps done!");
+      console.log("Airdrops to group peeps done!");
     } catch (error) {
-      console.error("Failed to setup test environment:", error);
+      console.error("Error:", error);
       throw error;
     }
   });
 
-  it("initializes group", async () => {
+  // the group is already initialized
+  it.skip("initializes group", async () => {
     try {
       const tx = await program.methods
         .initializeGroup(SEED)
@@ -129,13 +148,19 @@ describe("spliff", async () => {
   it("add_expenses for all the users", async () => {
     const expenseAmount = new anchor.BN(200);
     try {
-      const [user1USDCBalance, user2USDCBalance, user3USDCBalance] = [
-        user1,
-        user2,
-        user3,
-      ].map(async (u) => checkUSDCBalance(u.publicKey));
+      // const [user1USDCBalance, user2USDCBalance, user3USDCBalance] =
+      //   await Promise.all(
+      //     [user1, user2, user3].map((u) => checkUSDCBalance(u.publicKey))
+      //   );
 
-      const addExpenseUser1 = await program.methods
+      // console.log(
+      //   "user accounts USDC balances: ",
+      //   user1USDCBalance,
+      //   user2USDCBalance,
+      //   user3USDCBalance
+      // );
+
+      const addExpenseUser1Instruction = await program.methods
         .addExpense(expenseAmount)
         .accountsPartial({
           admin: admin.publicKey,
@@ -146,7 +171,7 @@ describe("spliff", async () => {
         })
         .instruction();
 
-      const addExpenseUser2 = await program.methods
+      const addExpenseUser2Instruction = await program.methods
         .addExpense(expenseAmount)
         .accountsPartial({
           admin: admin.publicKey,
@@ -157,7 +182,7 @@ describe("spliff", async () => {
         })
         .instruction();
 
-      const addExpenseUser3 = await program.methods
+      const addExpenseUser3Instruction = await program.methods
         .addExpense(expenseAmount)
         .accountsPartial({
           admin: admin.publicKey,
@@ -169,12 +194,89 @@ describe("spliff", async () => {
         .instruction();
 
       const transaction = new anchor.web3.Transaction();
-      transaction.add(addExpenseUser1, addExpenseUser2, addExpenseUser3);
+      transaction.add(
+        addExpenseUser1Instruction,
+        addExpenseUser2Instruction,
+        addExpenseUser3Instruction
+      );
+      transaction.feePayer = admin.publicKey;
+      transaction.recentBlockhash = (
+        await connection.getLatestBlockhash()
+      ).blockhash;
 
       const tx = await provider.sendAndConfirm(transaction);
       console.log("addExpense for all users tx", tx);
     } catch (error) {
-      console.error("Test failed:", error);
+      console.error("addExpense for all users test failed:", error);
+      throw error;
+    }
+  });
+
+  it("settle expenses for users", async () => {
+    try {
+      const [adminUsdcAta, debtorUsdcAta1, debtorUsdcAta2, debtorUsdcAta3] =
+        await Promise.all(
+          [admin, user1, user2, user3].map((u) => findUSDCAta(u.publicKey))
+        );
+      const settleExpenseUser1Instruction = await program.methods
+        .settleExpense()
+        .accountsPartial({
+          user: user1.publicKey,
+          group: groupPda,
+          expense: expensePda1,
+          adminUsdcAta,
+          debtorUsdcAta: debtorUsdcAta1,
+          mint: USDC_MINT,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .instruction();
+
+      const settleExpenseUser2Instruction = await program.methods
+        .settleExpense()
+        .accountsPartial({
+          user: user2.publicKey,
+          group: groupPda,
+          expense: expensePda2,
+          adminUsdcAta,
+          debtorUsdcAta: debtorUsdcAta2,
+          mint: USDC_MINT,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .instruction();
+
+      const settleExpenseUser3Instruction = await program.methods
+        .settleExpense()
+        .accountsPartial({
+          user: user3.publicKey,
+          group: groupPda,
+          expense: expensePda3,
+          adminUsdcAta,
+          debtorUsdcAta: debtorUsdcAta3,
+          mint: USDC_MINT,
+          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .instruction();
+
+      const transaction = new anchor.web3.Transaction();
+
+      transaction.add(
+        settleExpenseUser1Instruction,
+        settleExpenseUser2Instruction,
+        settleExpenseUser3Instruction
+      );
+      transaction.recentBlockhash = (
+        await connection.getLatestBlockhash()
+      ).blockhash;
+      transaction.feePayer = admin.publicKey;
+      transaction.partialSign(user1, user2, user3);
+
+      const tx = await provider.sendAndConfirm(transaction);
+      console.log("settle expense tx: ", tx);
+    } catch (error) {
+      console.error("settle expense test failed:", error);
       throw error;
     }
   });

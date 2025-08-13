@@ -55,7 +55,7 @@ impl SettleExpense<'_> {
             from: self.debtor_usdc_ata.to_account_info(),
             to: self.admin_usdc_ata.to_account_info(),
             mint: self.mint.to_account_info(),
-            authority: self.debtor_usdc_ata.to_account_info()
+            authority: self.user.to_account_info()
         };
 
         let cpi_context = CpiContext::new(cpi_program, cpi_accounts);
