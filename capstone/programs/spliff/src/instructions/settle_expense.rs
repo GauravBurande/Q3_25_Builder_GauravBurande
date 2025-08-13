@@ -1,5 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_spl::{mint, token::{transfer_checked, TokenAccount, TransferChecked, Mint, Token}};
+use anchor_spl::{mint, token_interface::{transfer_checked, TokenAccount, TransferChecked, Mint}, token::Token};
 
 use crate::{Expense, Group};
 
