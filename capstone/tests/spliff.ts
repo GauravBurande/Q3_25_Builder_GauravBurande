@@ -160,45 +160,29 @@ describe("spliff", async () => {
       //   user3USDCBalance
       // );
 
-      const addExpenseUser1Instruction = await program.methods
-        .addExpense(expenseAmount)
-        .accountsPartial({
-          admin: admin.publicKey,
-          user: user1.publicKey,
-          expense: expensePda1,
-          group: groupPda,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        })
-        .instruction();
+      const userExpenseData = [
+        { user: user1, expense: expensePda1 },
+        { user: user2, expense: expensePda2 },
+        { user: user3, expense: expensePda3 },
+      ];
 
-      const addExpenseUser2Instruction = await program.methods
-        .addExpense(expenseAmount)
-        .accountsPartial({
-          admin: admin.publicKey,
-          user: user2.publicKey,
-          expense: expensePda2,
-          group: groupPda,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        })
-        .instruction();
-
-      const addExpenseUser3Instruction = await program.methods
-        .addExpense(expenseAmount)
-        .accountsPartial({
-          admin: admin.publicKey,
-          user: user3.publicKey,
-          expense: expensePda3,
-          group: groupPda,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        })
-        .instruction();
+      const addExpenseInstructions = await Promise.all(
+        userExpenseData.map(async ({ user, expense }) =>
+          program.methods
+            .addExpense(expenseAmount)
+            .accountsPartial({
+              admin: admin.publicKey,
+              user: user.publicKey,
+              expense,
+              group: groupPda,
+              systemProgram: anchor.web3.SystemProgram.programId,
+            })
+            .instruction()
+        )
+      );
 
       const transaction = new anchor.web3.Transaction();
-      transaction.add(
-        addExpenseUser1Instruction,
-        addExpenseUser2Instruction,
-        addExpenseUser3Instruction
-      );
+      transaction.add(...addExpenseInstructions);
       transaction.feePayer = admin.publicKey;
       transaction.recentBlockhash = (
         await connection.getLatestBlockhash()
@@ -214,59 +198,37 @@ describe("spliff", async () => {
 
   it("settle expenses for users", async () => {
     try {
-      const [adminUsdcAta, debtorUsdcAta1, debtorUsdcAta2, debtorUsdcAta3] =
-        await Promise.all(
-          [admin, user1, user2, user3].map((u) => findUSDCAta(u.publicKey))
-        );
-      const settleExpenseUser1Instruction = await program.methods
-        .settleExpense()
-        .accountsPartial({
-          user: user1.publicKey,
-          group: groupPda,
-          expense: expensePda1,
-          adminUsdcAta,
-          debtorUsdcAta: debtorUsdcAta1,
-          mint: USDC_MINT,
-          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        })
-        .instruction();
+      const [adminUsdcAta, ...debtorUsdcAtas] = await Promise.all(
+        [admin, user1, user2, user3].map((u) => findUSDCAta(u.publicKey))
+      );
 
-      const settleExpenseUser2Instruction = await program.methods
-        .settleExpense()
-        .accountsPartial({
-          user: user2.publicKey,
-          group: groupPda,
-          expense: expensePda2,
-          adminUsdcAta,
-          debtorUsdcAta: debtorUsdcAta2,
-          mint: USDC_MINT,
-          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        })
-        .instruction();
+      const userSettleData = [
+        { user: user1, expense: expensePda1, debtorUsdcAta: debtorUsdcAtas[0] },
+        { user: user2, expense: expensePda2, debtorUsdcAta: debtorUsdcAtas[1] },
+        { user: user3, expense: expensePda3, debtorUsdcAta: debtorUsdcAtas[2] },
+      ];
 
-      const settleExpenseUser3Instruction = await program.methods
-        .settleExpense()
-        .accountsPartial({
-          user: user3.publicKey,
-          group: groupPda,
-          expense: expensePda3,
-          adminUsdcAta,
-          debtorUsdcAta: debtorUsdcAta3,
-          mint: USDC_MINT,
-          tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
-          systemProgram: anchor.web3.SystemProgram.programId,
-        })
-        .instruction();
+      const settleExpenseInstructions = await Promise.all(
+        userSettleData.map(async ({ user, expense, debtorUsdcAta }) =>
+          program.methods
+            .settleExpense()
+            .accountsPartial({
+              user: user.publicKey,
+              group: groupPda,
+              expense,
+              adminUsdcAta,
+              debtorUsdcAta,
+              mint: USDC_MINT,
+              tokenProgram: anchor.utils.token.TOKEN_PROGRAM_ID,
+              systemProgram: anchor.web3.SystemProgram.programId,
+            })
+            .instruction()
+        )
+      );
 
       const transaction = new anchor.web3.Transaction();
 
-      transaction.add(
-        settleExpenseUser1Instruction,
-        settleExpenseUser2Instruction,
-        settleExpenseUser3Instruction
-      );
+      transaction.add(...settleExpenseInstructions);
       transaction.recentBlockhash = (
         await connection.getLatestBlockhash()
       ).blockhash;
